@@ -1,5 +1,7 @@
 package event
 
+import "github.com/sandertv/mcwss/mctype"
+
 const (
 	_ = iota
 	AcquisitionPickedUp
@@ -18,11 +20,8 @@ const (
 // ItemAcquired is sent by the client when it acquires an item. This is most notably done when a player picks
 // an item up from the ground, but also when it crafts a new item, gets one from a chest etc.
 type ItemAcquired struct {
-	// Type is the numerical ID/type of the item acquired.
-	Type int
-	// AuxType is the metadata value of the item acquired.
-	AuxType int
-	// AcquisitionMethod was the method used to acquire the item. This is one of the methods in the constants
-	// above.
-	AcquisitionMethodID int
+	AcquisitionMethodId int
+	Count               int
+	Item                mctype.Block
+	Player              mctype.Player
 }
