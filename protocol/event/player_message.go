@@ -5,8 +5,8 @@ package event
 type PlayerMessage struct {
 	// Message is the message sent by the sender.
 	Message string
-	// MessageType is the type of the message, for example 'chat'.
-	MessageType string
+	// Type is the type of the message, for example 'chat'.
+	Type string
 	// Sender is the name of the sender of the message. This may be the name of the receiver if the receiver
 	// sent a message.
 	Sender string

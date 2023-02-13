@@ -1,5 +1,7 @@
 package protocol
 
+import "github.com/sandertv/mcwss/protocol/event"
+
 // Header describes the header of a packet. Each packet shares the same header.
 type Header struct {
 	// RequestID is a UUID specific to the request.
@@ -9,4 +11,6 @@ type Header struct {
 	MessagePurpose MessagePurpose `json:"messagePurpose"`
 	// Version is the version of the request. Currently 1.
 	Version int `json:"version"`
+	// EventName is the name of the event for EventResponse headers.
+	EventName event.Name `json:"eventName"`
 }

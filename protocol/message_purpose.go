@@ -10,6 +10,7 @@ const (
 	Error       MessagePurpose = "error"
 	Command     MessagePurpose = "commandRequest"
 	Response    MessagePurpose = "commandResponse"
+	Encrypt     MessagePurpose = "ws:encrypt"
 )
 
 // Packets is a map to translate message purposes to their corresponding packets.
@@ -20,4 +21,5 @@ var Packets = map[MessagePurpose]interface{}{
 	Error:       &ErrorResponse{},
 	Response:    &CommandResponse{},
 	Command:     &CommandRequest{},
+	Encrypt:     &EncryptResponse{},
 }

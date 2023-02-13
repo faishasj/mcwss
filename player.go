@@ -6,15 +6,15 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"log"
+	"reflect"
+	"sync"
+
 	"github.com/gorilla/websocket"
 	"github.com/sandertv/mcwss/mctype"
 	"github.com/sandertv/mcwss/protocol"
 	"github.com/sandertv/mcwss/protocol/command"
 	"github.com/sandertv/mcwss/protocol/event"
-	"github.com/yudai/gojsondiff"
-	"log"
-	"reflect"
-	"sync"
 )
 
 // Player is a player connected to the websocket server.
@@ -102,7 +102,7 @@ func (player *Player) Position(f func(position mctype.Position)) {
 	})
 }
 
-// Rotation requests the Y-Rotation (yaw) of a player and calls the function passed when a response is 
+// Rotation requests the Y-Rotation (yaw) of a player and calls the function passed when a response is
 // received, containing the rotation of the player.
 func (player *Player) Rotation(f func(rotation float64)) {
 	player.Exec(command.QueryTargetRequest(mctype.Target(player.name)), func(response *command.QueryTarget) {
@@ -493,6 +493,7 @@ func (player *Player) handleIncomingPacket(packet protocol.Packet) error {
 		return fmt.Errorf("unknown packet %v", reflect.TypeOf(body).Name())
 	case *protocol.ErrorResponse:
 		return fmt.Errorf("a client side error occurred (code = %v): %v", body.StatusCode, body.StatusMessage)
+	case *protocol.EncryptResponse:
 	case *protocol.CommandResponse:
 		player.Lock()
 		callback, ok := player.commandCallbacks[packet.Header.RequestID]
@@ -500,7 +501,8 @@ func (player *Player) handleIncomingPacket(packet protocol.Packet) error {
 		delete(player.commandCallbacks, packet.Header.RequestID)
 		player.Unlock()
 		if !ok {
-			return fmt.Errorf("command response: got command response with unknown requestID %v", packet.Header.RequestID)
+			//TODO: Pass silently
+			//return fmt.Errorf("command response: got command response with unknown requestID %v", packet.Header.RequestID)
 		}
 
 		if callback.IsValid() {
@@ -511,26 +513,14 @@ func (player *Player) handleIncomingPacket(packet protocol.Packet) error {
 			callback.Call([]reflect.Value{reflect.ValueOf(commandResponseValue).Elem()})
 		}
 	case *protocol.EventResponse:
-		properties := event.Properties{}
-		if err := json.Unmarshal(body.Properties, &properties); err != nil {
-			return fmt.Errorf("event response: malformed properties JSON: %v", err)
-		}
-		// Update the player's properties to the latest.
-		player.Properties = properties
-
-		eventFunc, ok := event.Events[body.EventName]
+		eventFunc, ok := event.Events[packet.Header.EventName]
 		if !ok {
-			return fmt.Errorf("event response: unknown event with name %v", body.EventName)
+			return fmt.Errorf("event response: unknown event with name %v", packet.Header.EventName)
 		}
 		eventData := eventFunc()
-		_ = json.Unmarshal(body.Properties, &eventData)
+		_ = json.Unmarshal([]byte(*body), &eventData)
 
-		if measurable, ok := eventData.(event.Measurable); ok {
-			// Parse measurements if the event requires them.
-			measurable.ConsumeMeasurements(body.Measurements)
-		}
-
-		if player.debug {
+		/*if player.debug {
 			foundData := map[string]interface{}{}
 			b, _ := json.Marshal(eventData)
 			_ = json.Unmarshal(b, &foundData)
@@ -562,14 +552,14 @@ func (player *Player) handleIncomingPacket(packet protocol.Packet) error {
 					log.Printf("diff in %T.%v: should be '%v'", eventData, changeKey, actualVal)
 				}
 			}
-		}
+		}*/
 
 		// Find the handler by the event name.
 		player.Lock()
-		handler, ok := player.handlers[body.EventName]
+		handler, ok := player.handlers[packet.Header.EventName]
 		player.Unlock()
 		if !ok {
-			return fmt.Errorf("event response: unhandled event response for event %v", body.EventName)
+			return fmt.Errorf("event response: unhandled event response for event %v", packet.Header.EventName)
 		}
 		// Finally call the handler with the event data processed.
 		handler(eventData)

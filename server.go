@@ -5,10 +5,11 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"encoding/json"
-	"github.com/gorilla/websocket"
-	"github.com/sandertv/mcwss/protocol"
 	"log"
 	"net/http"
+
+	"github.com/gorilla/websocket"
+	"github.com/sandertv/mcwss/protocol"
 )
 
 // Server is the main entry-point of the mcwss package. It allows interfacing with clients connected to it and
@@ -138,16 +139,19 @@ func (server *Server) handleResponse(writer http.ResponseWriter, request *http.R
 		// The packet.Body is currently a map because of some funny JSON behaviour. We marshal and unmarshal
 		// it into a pointer and set it back to have a pointer to a struct as body.
 		data, _ := json.Marshal(packet.Body)
-		cmdResponse, ok := body.(*protocol.CommandResponse)
 
-		if !ok {
+		switch body := body.(type) {
+		default:
 			if err := json.Unmarshal(data, &body); err != nil {
 				log.Printf("map to struct conversion failed: %v", err)
 				break
 			}
-		} else {
-			*cmdResponse = protocol.CommandResponse(data)
+		case *protocol.CommandResponse:
+			*body = protocol.CommandResponse(data)
+		case *protocol.EventResponse:
+			*body = protocol.EventResponse(data)
 		}
+
 		packet.Body = body
 
 		if err := player.handleIncomingPacket(*packet); err != nil {
