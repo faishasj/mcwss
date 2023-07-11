@@ -1,4 +1,4 @@
-module github.com/sandertv/mcwss
+module github.com/faishasj/mcwss
 
 go 1.19
 
